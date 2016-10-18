@@ -24,8 +24,8 @@ function! s:getAlternatives(originalExt)
   " Returns a list of alternative extensions for the given argument.
   let result = []
   if exists('g:related_alternatives') &&
-        \ has_key(g:related_alternatives, originalExt)
-    let result = result + g:related_alternatives[originalExt]
+        \ has_key(g:related_alternatives, a:originalExt)
+    let result = result + g:related_alternatives[a:originalExt]
   endif
 
   if has_key(s:alternatives, a:originalExt)
