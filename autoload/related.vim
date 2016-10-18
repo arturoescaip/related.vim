@@ -3,10 +3,13 @@ if exists("g:loaded_related") || &cp || v:version < 700
 endif
 let g:loaded_related = 1
 
-let s:alternatives = {
-   \ 'c': ['h'],
-   \ 'cpp': ['h'],
-   \ 'h': ['c', 'cpp'] }
+let s:alternatives = [
+      \ [ '\.c$', ['.h'] ],
+      \ [ '\.cpp$', ['.h'] ],
+      \ [ '\.h$', ['.c', '.cpp'] ],
+      \ [ '\.go$', [ '_test.go' ] ],
+      \ [ '_test\.go$', [ '.go' ] ],
+      \]
 
 function! s:getEditCmd(inSplit)
   if a:inSplit
@@ -20,22 +23,19 @@ function! s:getEditCmd(inSplit)
   endif
 endfunction
 
-function! s:getAlternatives(originalExt)
-  " Returns a list of alternative extensions for the given argument.
+function s:getMatches(assoc)
   let result = []
-  if exists('g:related_alternatives') &&
-        \ has_key(g:related_alternatives, a:originalExt)
-    let result = result + g:related_alternatives[a:originalExt]
-  endif
-
-  if has_key(s:alternatives, a:originalExt)
-    let result = result + s:alternatives[a:originalExt]
-  endif
+  let fname = expand('%')
+  for part in a:assoc
+    if match(fname, part[0]) != -1
+      let result += part
+    endif
+  endfor
   return result
 endfunction
 
-function! s:handleExtension(ext, editCmd)
-  let fname = printf('%s.%s', expand('%:r'), a:ext)
+function! s:handleAlternative(base, alt, editCmd)
+  let fname = substitute(expand('%'), '\v' . a:base, a:alt, '')
 
   " If the file is already displayed in a window, just go to it.
   let window = bufwinnr(fname)
@@ -53,11 +53,22 @@ function! s:handleExtension(ext, editCmd)
 endfunction
 
 function! related#switch(inSplit)
+  let fname = expand('%')
   let editCmd = s:getEditCmd(a:inSplit)
   
-  for ext in s:getAlternatives(expand('%:e'))
-    if s:handleExtension(ext, editCmd)
-      return
+  if exists('g:related_alternatives')
+    let alternatives = g:related_alternatives + s:alternatives
+  else
+    let alternatives = s:alternatives
+  endif
+
+  for altList in alternatives
+    if match(fname, '\v' . altList[0]) != -1
+      for alt in altList[1]
+        if s:handleAlternative(altList[0], alt, editCmd)
+          return
+        endif
+      endfor
     endif
   endfor
 
